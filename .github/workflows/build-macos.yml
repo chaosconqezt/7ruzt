@@ -1,0 +1,23 @@
+name: Build macOS
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest   # Apple Silicon (aarch64)
+            target: aarch64-apple-darwin
+          - os: macos-13       # Intel (x86_64)
+            target: x86_64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - run: cargo build --release --target ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/archiver-app

@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "note": "Запиненная версия 7-Zip, которую мы поставляем. Обновляется scripts/update-7zip.ps1.",
+  "platforms": {
+    "windows-x64": {
+      "version": "26.06",
+      "build": "7z2606-x64.exe",
+      "release_date": "2026-11-06",
+      "source_url": "https://github.com/ip7z/7zip/releases/download/26.06/7z2606-x64.exe",
+      "installer_sha256": "9b697f65ecc2d9b0152f5ee96d72dde522a7827690349d9307935dacf40f42ec",
+      "runtime": {
+        "binary": "7z.exe",
+        "files": {
+          "7z.exe": "dc0493429fe28136fcb177a0e77c9875cbb3b0bff5f2f8eeba4df302e98cef76",
+          "7z.dll": "500db9eb17f3c21b729ba41dd02ecfe1823da05028c7e4ba129084cc74cc364e",
+          "License.txt": "519ac0a4bded9c18ea02e0afb71f663d8c47373bd9facd3ac96a79f51d77765d"
+        }
+      }
+    },
+    "linux-x64": {
+      "version": "26.06",
+      "build": "7z2606-linux-x64.tar.xz",
+      "release_date": "2026-11-06",
+      "source_url": "https://github.com/ip7z/7zip/releases/download/26.06/7z2606-linux-x64.tar.xz",
+      "installer_sha256": "2b539cf067b2ad48e1baa5093dbaa8818b73542d1222a0ffde9dc5f2922ea62e",
+      "runtime": {
+        "binary": "7zz",
+        "files": {
+          "7zz": "f94066e93f9a807547a3bff1021b3ec79d5ea4f57dfead018e9698182ad283b5",
+          "License.txt": "1790374e5352329cedb46ee3808930a88e9ca2f08b82b10fcf5cf605d2c301b1"
+        }
+      }
+    },
+    "macos-arm64": {
+      "version": "26.06",
+      "build": "7z2606-mac.tar.xz",
+      "release_date": "2026-11-06",
+      "source_url": "https://github.com/ip7z/7zip/releases/download/26.06/7z2606-mac.tar.xz",
+      "installer_sha256": "b6f17920b4240940461dac8ef4009891881ac44d2a5ead625ede2ec8472185dd",
+      "runtime": {
+        "binary": "7zz",
+        "files": {
+          "7zz": "56cf8eb2fdc6f9c0ac5d7a3cd238505814ac8ed6b88a7c64a7e3256036252c60",
+          "License.txt": "1790374e5352329cedb46ee3808930a88e9ca2f08b82b10fcf5cf605d2c301b1"
+        }
+      }
+    },
+    "macos-x64": {
+      "version": "26.06",
+      "build": "7z2606-mac-x64.tar.xz",
+      "release_date": "2026-11-06",
+      "source_url": "https://github.com/ip7z/7zip/releases/download/26.06/7z2606-mac-x64.tar.xz",
+      "installer_sha256": "3af68b124052da7fc2a246c96b0bea6a68bfee389baa788f4cead1a133445586",
+      "runtime": {
+        "binary": "7zz",
+        "files": {
+          "7zz": "d54aa0864244abeef158772fbde3dd9bac2b93a54c564a76c4334c5a8bcaf35a",
+          "License.txt": "1790374e5352329cedb46ee3808930a88e9ca2f08b82b10fcf5cf605d2c301b1"
+        }
+      }
+    }
+  }
+}

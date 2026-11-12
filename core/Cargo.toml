@@ -1,0 +1,15 @@
+[package]
+name = "archiver-core"
+description = "Ядро архиватора: не знает ничего про UI"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+# Единственная зависимость ядра — календарь. Системное время приходит как UTC,
+# а показывать надо локальное; std такого не умеет.
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+
+[lints]
+workspace = true

@@ -1,0 +1,32 @@
+[package]
+name = "archiver-app"
+description = "GUI на GPUI: оболочка 7-Zip File Manager"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+# Один крейт — весь стек: ре-экспортирует gpui, gpui-base, gpui-component и ассеты.
+gpui-kit = "=0.9.1"
+archiver-core = { path = "../core" }
+# Темы лежат в app/themes.json — человекочитаемом файле рядом с исходниками.
+serde_json = "1"
+# Расширение → MIME для Linux-иконок: имя значка в теме freedesktop совпадает
+# с MIME (`application/pdf` → `application-pdf`). Чистый Rust, без GTK.
+mime_guess = "2"
+
+# Системные значки Windows/macOS: оболочка отдаёт RGBA. Крейт прячет `unsafe`
+# Win32/COM, а `image` нужен только за `Frame`/`RgbaImage`: gpui принимает
+# готовый `RenderImage` без повторного декодирования PNG в кадре.
+[target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
+file_icon_provider = "=1.0.2"
+image = { version = "0.25.10", default-features = false }
+
+# Linux: тема freedesktop читается напрямую, без GTK. Возвращаем путь к PNG/SVG,
+# gpui сам загружает и кеширует его как обычный image-asset.
+[target.'cfg(target_os = "linux")'.dependencies]
+freedesktop-icons = "=0.4.0"
+
+[lints]
+workspace = true
