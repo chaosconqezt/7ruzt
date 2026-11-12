@@ -28,10 +28,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # gpui-pre — снапшот Zed, поэтому набор повторяет то, что Zed требует для Linux.
-      # Часть библиотек (wayland, EGL, Vulkan) грузится через dlopen и на линковку
-      # не влияет, но их -dev пакеты дают симлинки и .pc, которые запрашивают
-      # фреймворки; без libxkbcommon* падает уже финальный `cc`.
       - name: Системные библиотеки для gpui/wgpu
         run: |
           sudo apt-get update
