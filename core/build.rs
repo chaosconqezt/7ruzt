@@ -50,9 +50,12 @@ fn main() {
         return;
     };
 
-    // OUT_DIR = target/<профиль>/build/<пакет>/out — рядом с exe это на три
-    // уровня выше.
-    let Some(dest_dir) = Path::new(&out_dir).ancestors().nth(3) else {
+    // Папка профиля (target/<triple>/release) — рядом с ней cargo кладёт бинарник.
+    // Глубину не считаем: раскладка build-скриптов у cargo разная
+    // (`build/<пакет>-<хеш>/out` в старых версиях и `build/<пакет>/<хеш>/out`
+    // в новых). Фиксированный nth(3) на новой раскладке попадает в `build`,
+    // и 7zz уезжает в target/<triple>/release/build/ вместо .../release/.
+    let Some(dest_dir) = profile_dir(&out_dir) else {
         return;
     };
 
@@ -67,6 +70,17 @@ fn main() {
         let dst = dest_dir.join(file);
         copy(&src, &dst, &target_os);
     }
+}
+
+/// Папка профиля сборки: родитель ближайшего предка с именем `build`.
+///
+/// Так работает и старая раскладка (`.../release/build/<пакет>-<хеш>/out`),
+/// и новая (`.../release/build/<пакет>/<хеш>/out`).
+fn profile_dir(out_dir: &str) -> Option<&Path> {
+    let build = Path::new(out_dir)
+        .ancestors()
+        .find(|path| path.file_name().is_some_and(|name| name == "build"))?;
+    build.parent()
 }
 
 fn copy(src: &Path, dst: &Path, target_os: &str) {

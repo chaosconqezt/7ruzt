@@ -17,7 +17,6 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   TARGET: x86_64-apple-darwin
-  VENDOR: vendor/7zip/macos-x64
   # Пуш всегда собирает release. dev — только ручной запуск (Run workflow).
   PROFILE: ${{ github.event.inputs.profile || 'release' }}
 
@@ -46,10 +45,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ env.TARGET }}
-          # true, пока разбираемся со smoke: иначе падение проверки выбрасывает
-          # 12 минут сборки и каждая итерация стоит полного билда.
-          # Вернуть false, когда проверки станут зелёными.
-          cache-on-failure: true
+          # Кэшировать только успешные сборки: битый target/ после падения
+          # на следующий прогон лучше не тащить.
+          cache-on-failure: false
 
       # cargo кладёт dev-сборку в target/<target>/debug, а release — в .../release.
       # Дальше по воркфлоу путь берётся из этого вывода, чтобы профиль менялся
@@ -83,23 +81,6 @@ jobs:
           grep -E '/usr/bin/ld:|^ld:|Undefined symbols|undefined reference|cannot find -l|ld: symbol\(s\) not found|collect2|signal 9|No space left|^error(\[|:)|failed to run custom build|caught signal' build.log | tail -n 60 \
             || echo 'причина не опознана — смотрите полный лог шага «Сборка»'
           exit 1
-
-      # Разово для разбора: build.rs ядра должен положить 7zz и License.txt
-      # рядом с бинарником, но на CI их нет. Смотрим, что видит сборка.
-      - name: Диагностика 7zz
-        if: always()
-        run: |
-          echo "== vendor в чекауте"
-          ls -la "$VENDOR" || echo "::error::vendor нет в чекауте"
-          echo "== где 7zz и License.txt в target"
-          find "target/$TARGET" \( -name 7zz -o -name License.txt \) -print 2>/dev/null | head -n 20 || true
-          echo "== предупреждения сборки"
-          grep -n 'warning' build.log | head -n 30 || true
-          # В cargo build-скрипт складывает свой stdout сюда: если копирование
-          # падало, тут будет `cargo:warning=...` с текстом ошибки ОС.
-          echo "== вывод build-скрипта ядра"
-          cat target/"$TARGET"/"${{ steps.profile.outputs.dir }}"/build/archiver-core-*/output 2>/dev/null \
-            || echo "output не найден — build-скрипт ядра не выполнялся"
 
       # Проверка не блокирует выкладку: артефакт загрузится даже при её падении,
       # но джобу всё равно завалит шаг «Итог smoke» после выкладки.
