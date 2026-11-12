@@ -1,6 +1,14 @@
 name: Build Linux
 
-on: [push, workflow_dispatch]
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Профиль cargo: release — готовый бинарник, dev — с отладочной информацией"
+        type: choice
+        options: [release, dev]
+        default: release
 
 concurrency:
   group: linux-${{ github.ref }}
@@ -9,19 +17,29 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   TARGET: x86_64-unknown-linux-gnu
+  # Пуш всегда собирает release. dev — только ручной запуск (Run workflow).
+  PROFILE: ${{ github.event.inputs.profile || 'release' }}
 
 jobs:
   build:
+    # 24.04 — glibc 2.39. Если нужен бинарник для старых дистрибутивов,
+    # поменяйте на ubuntu-22.04 (glibc 2.35), набор пакетов тот же.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
 
+      # gpui-pre — снапшот Zed, поэтому набор повторяет то, что Zed требует для Linux.
+      # Часть библиотек (wayland, EGL, Vulkan, xkbcommon) грузится через dlopen и
+      # на линковку не влияет, но их -dev пакеты дают симлинки и .pc, которые
+      # запрашивают фреймворки; без них падает уже финальный `cc`.
       - name: Системные библиотеки для gpui/wgpu
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential pkg-config \
-            libfontconfig1-dev libfreetype-dev libxcb1-dev
+            libfontconfig1-dev libfreetype-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev \
+            libwayland-dev libx11-xcb-dev libxcb1-dev
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -32,21 +50,48 @@ jobs:
           key: ${{ env.TARGET }}
           cache-on-failure: false
 
-      - run: cargo build --release --locked --target ${{ env.TARGET }} -p archiver-app
+      # cargo кладёт dev-сборку в target/<target>/debug, а release — в .../release.
+      - name: Каталог профиля
+        id: profile
+        run: |
+          if [ "$PROFILE" = "dev" ]; then
+            dir=debug
+          else
+            dir="$PROFILE"
+          fi
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
+      # --locked: Cargo.lock лежит в репозитории, версии зависимостей не плывут.
+      # continue-on-error нужен, чтобы ниже вытащить из лога читаемую причину.
+      - name: Сборка
+        id: build
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          cargo build --profile "$PROFILE" --locked --target "$TARGET" -p archiver-app 2>&1 | tee build.log
+
+      # У ошибки линковки ~мегабайт `= note:` с полным вызовом cc и списком rlib.
+      # Оставляем только строки, по которым видно причину.
+      - name: Сборка — что именно сломалось
+        if: steps.build.outcome == 'failure'
+        run: |
+          grep -E '/usr/bin/ld:|^ld:|Undefined symbols|undefined reference|cannot find -l|ld: symbol\(s\) not found|collect2|signal 9|No space left|^error(\[|:)|failed to run custom build|caught signal' build.log | tail -n 60 \
+            || echo 'причина не опознана — смотрите полный лог шага «Сборка»'
+          exit 1
 
       - name: "Smoke test — архитектура x86-64, 7zz рядом и запускается"
         run: |
-          bin="target/${{ env.TARGET }}/release/archiver-app"
-          test -x "$bin"
-          file "$bin" | grep -q 'x86-64'
-          test -x "target/${{ env.TARGET }}/release/7zz"
-          "target/${{ env.TARGET }}/release/7zz" i > /dev/null
+          dir="target/$TARGET/${{ steps.profile.outputs.dir }}"
+          test -x "$dir/archiver-app"
+          file "$dir/archiver-app" | grep -q 'x86-64'
+          test -x "$dir/7zz"
+          "$dir/7zz" i > /dev/null
 
       - uses: actions/upload-artifact@v7
         with:
-          name: archiver-linux-x86_64
+          name: archiver-linux-x86_64-${{ env.PROFILE }}
           if-no-files-found: error
           path: |
-            target/${{ env.TARGET }}/release/archiver-app
-            target/${{ env.TARGET }}/release/7zz
-            target/${{ env.TARGET }}/release/License.txt
+            target/${{ env.TARGET }}/${{ steps.profile.outputs.dir }}/archiver-app
+            target/${{ env.TARGET }}/${{ steps.profile.outputs.dir }}/7zz
+            target/${{ env.TARGET }}/${{ steps.profile.outputs.dir }}/License.txt
