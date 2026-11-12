@@ -12,15 +12,10 @@ env:
 
 jobs:
   build:
-    # 24.04 — glibc 2.39. Если нужен бинарник для старых дистрибутивов,
-    # поменяйте на ubuntu-22.04 (glibc 2.35), набор пакетов тот же.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
 
-      # Всё, что нужно линковке. Остальное грузится в рантайме:
-      # wayland-sys/khronos-egl/ash включают dlopen, x11rb и xkbcommon — чистый Rust,
-      # поэтому libwayland-dev, libegl1-mesa-dev, libxkbcommon-dev не нужны.
       - name: Системные библиотеки для gpui/wgpu
         run: |
           sudo apt-get update
@@ -37,7 +32,6 @@ jobs:
           key: ${{ env.TARGET }}
           cache-on-failure: false
 
-      # --locked: Cargo.lock лежит в репозитории, версии зависимостей не плывут.
       - run: cargo build --release --locked --target ${{ env.TARGET }} -p archiver-app
 
       - name: "Smoke test — архитектура x86-64, 7zz рядом и запускается"

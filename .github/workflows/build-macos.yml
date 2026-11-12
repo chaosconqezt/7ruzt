@@ -2,7 +2,6 @@ name: Build macOS
 
 on: [push, workflow_dispatch]
 
-# Одна и та же ветка не должна собираться дважды: новый пуш отменяет прошлый прогон.
 concurrency:
   group: macos-${{ github.ref }}
   cancel-in-progress: true
@@ -13,12 +12,6 @@ env:
 
 jobs:
   build:
-    # Intel-only, поэтому матрица не нужна.
-    # macos-13 (Ventura) снят с поддержки 4 декабря 2025 — на нём этот воркфлоу
-    # просто не запустится. macos-15-intel — последний x86_64-образ Actions,
-    # он доступен до августа 2027.
-    # Если Intel-раннер уберут: собирать тут же кросс-сборкой на arm64
-    # (`--target x86_64-apple-darwin` уже указан явно, менять ничего не придётся).
     runs-on: macos-15-intel
     steps:
       # checkout/upload-artifact — JS-экшены, node в них поставляет раннер.
@@ -30,9 +23,6 @@ jobs:
         with:
           targets: ${{ env.TARGET }}
 
-      # Кэш cargo-реестра, git-зависимостей и target/.
-      # Ключ включает версию rustc, хеш Cargo.lock и наш target — при их смене
-      # кэш сам инвалидируется, руками версии поднимать не надо.
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ env.TARGET }}
