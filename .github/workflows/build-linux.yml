@@ -94,6 +94,11 @@ jobs:
           find "target/$TARGET" \( -name 7zz -o -name License.txt \) -print 2>/dev/null | head -n 20 || true
           echo "== предупреждения сборки"
           grep -n 'warning' build.log | head -n 30 || true
+          # В cargo build-скрипт складывает свой stdout сюда: если копирование
+          # падало, тут будет `cargo:warning=...` с текстом ошибки ОС.
+          echo "== вывод build-скрипта ядра"
+          cat target/"$TARGET"/"${{ steps.profile.outputs.dir }}"/build/archiver-core-*/output 2>/dev/null \
+            || echo "output не найден — build-скрипт ядра не выполнялся"
 
       # Проверка не блокирует выкладку: артефакт загрузится даже при её падении,
       # но джобу всё равно завалит шаг «Итог smoke» после выкладки.
