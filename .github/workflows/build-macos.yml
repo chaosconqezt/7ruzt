@@ -21,7 +21,10 @@ jobs:
     # (`--target x86_64-apple-darwin` уже указан явно, менять ничего не придётся).
     runs-on: macos-15-intel
     steps:
-      - uses: actions/checkout@v4
+      # checkout/upload-artifact — JS-экшены, node в них поставляет раннер.
+      # v4 ещё собирался под node20, с 2026-го он EOL: раннер гоняет его через
+      # node24 и сыплет предупреждением. В v7 рантайм уже node24.
+      - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -39,6 +42,7 @@ jobs:
 
       # build.rs ядра кладёт вендоренный 7zz и License.txt рядом с бинарником
       # в target/<target>/release — поэтому --target обязателен и здесь.
+      # --locked: Cargo.lock лежит в репозитории, версии зависимостей не плывут.
       - run: cargo build --release --locked --target ${{ env.TARGET }} -p archiver-app
 
       - name: "Smoke test — архитектура x86_64, 7zz рядом и запускается"
@@ -49,7 +53,7 @@ jobs:
           test -x "target/${{ env.TARGET }}/release/7zz"
           "target/${{ env.TARGET }}/release/7zz" i > /dev/null
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: archiver-macos-x86_64
           if-no-files-found: error
