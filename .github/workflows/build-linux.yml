@@ -29,9 +29,9 @@ jobs:
       - uses: actions/checkout@v7
 
       # gpui-pre — снапшот Zed, поэтому набор повторяет то, что Zed требует для Linux.
-      # Часть библиотек (wayland, EGL, Vulkan, xkbcommon) грузится через dlopen и
-      # на линковку не влияет, но их -dev пакеты дают симлинки и .pc, которые
-      # запрашивают фреймворки; без них падает уже финальный `cc`.
+      # Часть библиотек (wayland, EGL, Vulkan) грузится через dlopen и на линковку
+      # не влияет, но их -dev пакеты дают симлинки и .pc, которые запрашивают
+      # фреймворки; без libxkbcommon* падает уже финальный `cc`.
       - name: Системные библиотеки для gpui/wgpu
         run: |
           sudo apt-get update
@@ -79,13 +79,43 @@ jobs:
             || echo 'причина не опознана — смотрите полный лог шага «Сборка»'
           exit 1
 
-      - name: "Smoke test — архитектура x86-64, 7zz рядом и запускается"
+      # Проверка не блокирует выкладку: артефакт загрузится даже при её падении,
+      # но джобу всё равно завалит шаг «Итог smoke» после выкладки.
+      - name: "Smoke test — бинарник и 7zz на месте"
+        id: smoke
+        continue-on-error: true
         run: |
           dir="target/$TARGET/${{ steps.profile.outputs.dir }}"
-          test -x "$dir/archiver-app"
-          file "$dir/archiver-app" | grep -q 'x86-64'
-          test -x "$dir/7zz"
+          echo "каталог: $dir"
+          ls -la "$dir" || echo "::error::каталога нет"
+
+          for f in archiver-app 7zz; do
+            if [ ! -e "$dir/$f" ]; then
+              echo "::error::$f нет в $dir"
+              exit 1
+            fi
+            if [ ! -x "$dir/$f" ]; then
+              echo "::error::$f без бита исполнения: $(ls -l "$dir/$f")"
+              exit 1
+            fi
+          done
+
+          if command -v file > /dev/null; then
+            echo "file: $(file -b "$dir/7zz")"
+            echo "file: $(file -b "$dir/archiver-app")"
+          else
+            echo "::warning::file не установлен — проверка архитектуры пропущена"
+          fi
+
+          set +e
           "$dir/7zz" i > /dev/null
+          code=$?
+          set -e
+          echo "7zz i: exit=$code"
+          if [ "$code" -ne 0 ]; then
+            "$dir/7zz" i 2>&1 | tail -n 10
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v7
         with:
@@ -95,3 +125,9 @@ jobs:
             target/${{ env.TARGET }}/${{ steps.profile.outputs.dir }}/archiver-app
             target/${{ env.TARGET }}/${{ steps.profile.outputs.dir }}/7zz
             target/${{ env.TARGET }}/${{ steps.profile.outputs.dir }}/License.txt
+
+      - name: Итог smoke
+        if: steps.smoke.outcome == 'failure'
+        run: |
+          echo "::error::smoke test упал — смотрите вывод шага «Smoke test»"
+          exit 1
